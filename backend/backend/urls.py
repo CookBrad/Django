@@ -16,15 +16,12 @@ Including another URLconf
 """
 
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from api import views
 
-router = DefaultRouter()
-router.register(r'resume-sections', views.ResumeSectionViewSet)
-router.register(r'templates', views.TemplateViewSet)
+
+
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('', include("api.urls")),
     # Add auth URLs for user registration, login, etc.
     path('auth/', include('rest_framework.urls')),
 ]

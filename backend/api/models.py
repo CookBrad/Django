@@ -10,6 +10,7 @@ class ResumeSection(models.Model):
         ('AW', 'Awards'),
         # Add more as needed
     ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='resume_sections')
     title = models.CharField(max_length=100)
     content = models.TextField()
     section_type = models.CharField(max_length=2, choices=SECTION_TYPES)
