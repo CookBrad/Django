@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+// Importing necessary Ant Design components
+import { Select, Button, Input, Form, Row, Col, Typography } from 'antd';
 import Section from './Section';
+
+const { Option } = Select;
+const { TextArea } = Input;
+const { Title } = Typography;
 
 function ResumeBuilder() {
   const [sections, setSections] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [editSectionId, setEditSectionId] = useState(null);
-  const [sectionForm, setSectionForm] = useState({ title: '', content: '' });
+  const [sectionForm] = Form.useForm();
 
   useEffect(() => {
     axios.get('/resume-sections/')
@@ -16,33 +22,33 @@ function ResumeBuilder() {
       .then(response => setTemplates(response.data));
   }, []);
 
-  // Handler for template selection
   const handleTemplateSelect = (templateId) => {
     const selected = templates.find(t => t.id === templateId);
     setSelectedTemplate(selected);
   };
 
-  // Start editing a section
   const handleEdit = (section) => {
     setEditSectionId(section.id);
-    setSectionForm({ title: section.title, content: section.content });
+    sectionForm.setFieldsValue({ title: section.title, content: section.content });
   };
 
-  // Save or update a section
   const handleSave = () => {
-    if (editSectionId) {
-      axios.put(`/resume-sections/${editSectionId}/`, sectionForm)
-        .then(response => {
-          setSections(sections.map(s => s.id === editSectionId ? response.data : s));
-          setEditSectionId(null);
-        });
-    } else {
-      axios.post('/resume-sections/', { ...sectionForm, user_id: 1 }) // Assuming user ID
-        .then(response => {
-          setSections([...sections, response.data]);
-          setSectionForm({ title: '', content: '' });
-        });
-    }
+    sectionForm.validateFields().then(values => {
+      if (editSectionId) {
+        axios.put(`/resume-sections/${editSectionId}/`, values)
+          .then(response => {
+            setSections(sections.map(s => s.id === editSectionId ? response.data : s));
+            setEditSectionId(null);
+            sectionForm.resetFields();
+          });
+      } else {
+        axios.post('/resume-sections/', { ...values, user_id: 1 })
+          .then(response => {
+            setSections([...sections, response.data]);
+            sectionForm.resetFields();
+          });
+      }
+    });
   };
 
   const handleDelete = (id) => {
@@ -52,47 +58,48 @@ function ResumeBuilder() {
 
   return (
     <div>
-      <select onChange={(e) => handleTemplateSelect(parseInt(e.target.value))}>
-        <option value="">Choose a template</option>
+      <Select placeholder="Choose a template" onChange={(e) => handleTemplateSelect(e)}>
         {templates.map(template => (
-          <option key={template.id} value={template.id}>{template.name}</option>
+          <Option key={template.id} value={template.id}>{template.name}</Option>
         ))}
-      </select>
-
-  {selectedTemplate && 
-    <div>
-      <h1>Resume</h1>
-      {sections.map((section) => 
-        editSectionId === section.id ? (
-          <div key={section.id}>
-            <input 
-              value={sectionForm.title} 
-              onChange={(e) => setSectionForm({...sectionForm, title: e.target.value})} 
-              placeholder="Title" 
-            />
-            <textarea 
-              value={sectionForm.content} 
-              onChange={(e) => setSectionForm({...sectionForm, content: e.target.value})} 
-              placeholder="Content" 
-            />
-            <button onClick={handleSave}>Save</button>
-            <button onClick={() => setEditSectionId(null)}>Cancel</button>
-          </div>
-        ) : (
-          <Section 
-            key={section.id} 
-            title={section.title} 
-            content={section.content}
-            onEdit={() => handleEdit(section)} 
-            onDelete={() => handleDelete(section.id)} 
-          />
-        )
+      </Select>
+      
+      {selectedTemplate && (
+        <>
+          <Title level={2}>Resume</Title>
+          <Row gutter={[16, 16]}>
+            {sections.map((section) => 
+              editSectionId === section.id ? (
+                <Col span={24} key={section.id}>
+                  <Form form={sectionForm} layout="vertical">
+                    <Form.Item name="title" label="Title">
+                      <Input placeholder="Title" />
+                    </Form.Item>
+                    <Form.Item name="content" label="Content">
+                      <TextArea rows={4} placeholder="Content" />
+                    </Form.Item>
+                    <Form.Item>
+                      <Button type="primary" onClick={handleSave}>Save</Button>
+                      <Button style={{ marginLeft: '10px' }} onClick={() => setEditSectionId(null)}>Cancel</Button>
+                    </Form.Item>
+                  </Form>
+                </Col>
+              ) : (
+                <Section 
+                  key={section.id} 
+                  title={section.title} 
+                  content={section.content}
+                  onEdit={() => handleEdit(section)} 
+                  onDelete={() => handleDelete(section.id)} 
+                />
+              )
+            )}
+          </Row>
+        </>
       )}
+      <Button onClick={() => setEditSectionId(null)} type="dashed" block>Add New Section</Button>
     </div>
-  }
-  <button onClick={() => setEditSectionId(null)}>Add New Section</button>
-</div>
-);
+  );
 }
 
 export default ResumeBuilder;
